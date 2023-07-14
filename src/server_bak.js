@@ -1,5 +1,5 @@
 import http from "http";
-import { WebSocketServer } from 'ws';
+import WebSocket, { WebSocketServer } from 'ws';
 import express from "express";
 
 // 채팅로그에 타임스태프 구현
