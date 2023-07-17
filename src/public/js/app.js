@@ -1,51 +1,30 @@
-// 브라우저에서 backend와 connection을 열어주는 socket을 선언한다.
-const socket = new WebSocket(`ws://${window.location.host}`);
-// html로부터 Element를 불러온다.
-const messageList = document.querySelector("ul");
-const messageForm = document.querySelector("#message");
-const nickForm = document.querySelector("#nick");
+// front-end단에서 Io 설치
+const socket = io();
 
-socket.addEventListener("open", () => {
-    // 브라우저에서 서버와 연결되었음을 출력
-    console.log("Connected to Server ✅");
-});
+const welcome = document.querySelector("#welcome");
+const form = welcome.querySelector("form");
+const room = document.querySelector("#room");
 
-socket.addEventListener("message", (message) => {
-    // 브라우저에서 소켓으로 부터 받은 데이터를 메시지로 출력
-    const li = document.createElement("li");
-    li.innerText = message.data;
-    messageList.appendChild(li);
-});
+room.hidden = true;
 
-socket.addEventListener("close", () => {
-    // 브라우저에서 서버와 연결이 끊겼음을 출력
-    console.log("Disconnected from server ❌")
-});
+let roomName;
 
-function makeMassage(type, payload) {
-    // JSON object를 string타입으로 변환하는 함수
-    // 이게 Serialization이 아닌가 싶음.
-    // 이 서버는 JS로 만들었는데, 누군가는 GO를 이요해 서버에 접속하려 할 수 있기때문에 string으로 값을 전달해야한다.
-    const msg = {type, payload};
-    return JSON.stringify(msg);
+function showRoom() {
+    welcome.hidden = true;
+    room.hidden = false;
+    const h3 = room.querySelector("h3");
+    h3.innerText = `Room ${roomName}`;
 }
 
-function handleSubmit(event) {
-    // 메시시 submit 이벤트에 작동하는 함수
+function handleRoomEnter(event) {
     event.preventDefault();
-    const input = messageForm.querySelector("input");
-    socket.send(makeMassage("new_message", input.value));
+    const input = form.querySelector("input");
+    // send대신 emit을 쓴다. 1.emit은 특정 이벤트를 emit 해준다.
+    // 2.emit을 하면 argument를 줄 수 있는데 이것은 object가 될 수 있다. 전 처럼 string만 전송할 필요가 없다.
+    // 3.emit의 마지막 argument에는 콜백함수가 들어갈 수 있다.
+    socket.emit("enterRoom", { payload: input.value }, showRoom);
+    roomName = input.value;
     input.value = "";
 }
 
-function handleNickSave(event) {
-    // 닉네임 submit 이벤트에 작동하는 함수
-    event.preventDefault();
-    const input = nickForm.querySelector("input");
-    // 백엔드는 javascript object를 인식하지 못하기 때문
-    socket.send(makeMassage("nickname", input.value));
-    input.value = "";
-} 
-
-messageForm.addEventListener("submit", handleSubmit);
-nickForm.addEventListener("submit", handleNickSave);
+form.addEventListener("submit", handleRoomEnter);

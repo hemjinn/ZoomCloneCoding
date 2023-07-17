@@ -1,5 +1,5 @@
 import http from "http";
-import { WebSocketServer } from 'ws';
+import { Server } from 'socket.io';
 import express from "express";
 
 // 채팅로그에 타임스태프 구현
@@ -30,45 +30,26 @@ app.get("/*", (_, res) => res.render("/"));
 
 const handleListen = () => console.log(`Listening on http://localhost:3000`);
 
-// http서버를 websocket서버에 넘겨줌으로써 http와 ws 둘 다 사용 가능한 형태이다.
-// ws만 사용해도 무방하다.
-// 이렇게 같은 포트에 두 서버를 올리는 이유는 먼저 http로 보이게 하고
-// 그 위에 ws를 올리기 위해서이다.
-const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
+const httpServer = http.createServer(app);
+// socket.io 설치
+// 브라우저가 주는 websocket은 socket IO와 호환이 안된다. 왜? socket IO의 기능이 훨씬 많기때문.
+// 그래서 socket IO를 브라우저에도 설치를 한다. -> home.pug에 script 추가
+const wsServer = new Server(httpServer);
 
-// 서버에 접속한 이용자 수를 체크하기 위해 fake DB를 하나 만든다.
-const sockets = [];
+wsServer.on("connection", socket => {
+    // socket.on안에 이벤트를 넣어주면 된다.
+    // 두번 째 arg는 emit된 콜백함수를 불러온다. 서버는 백엔드에서 함수를 호출하지만, 함수는 프론트에서 실행된다.
+    socket.onAny((event) => {
+        console.log(`Socket Event:${event}`);
+    })
+    socket.on("enterRoom", (roomName, done) => {
+        socket.join(roomName);
+        done();
+    })
+})
 
-// on method는 socket으로부터 backend에 연결된 사람의 정보를 제공해준다.
-// socket은 나(서버)와 브라우저 사이의 연결이다.
-wss.on("connection", (socket) => {
-    // edge, chrome 등 연결된 브라우저의 socket을 sockets array에 넣어줌으로써
-    // sockets에 있는 모든 곳에 전달해 줄 수 있게된다.
-    sockets.push(socket);
-    // 연결 전 닉네임이 주어지지 않은 사용자들의 초기 닉네임값 설정
-    socket["nickname"] = "Unknown";
-    console.log("Connected to Browser ✅");
-    socket.on("close", () => {
-        console.log("Disconnection from the Browser ❌");
-    });
-    socket.on("message", (msg) => {
-        // 브라우저에서 서버로 보낸 메시지를 받아서 브라우저로 출력시킨다.
-        const parsedMsg = JSON.parse(msg);
-        switch (parsedMsg.type) {
-            case "new_message":
-                sockets.forEach((aSocket) => aSocket.send(`${realTime()} ${socket.nickname}: ${parsedMsg.payload}`));
-                break;
-            case "nickname":
-                // socket이 누구야? -> nickname을 socket안에 넣어줘야함.
-                // socket은 기본적으로 객체기 때문에 새로운 item을 추가할 수 있다.
-                socket["nickname"] = parsedMsg.payload; 
-                break;
-        }
-    });
-});
+httpServer.listen(3000, handleListen);
 
-server.listen(3000, handleListen);
 
 // text에 서로의 닉네임을 붙혀서 누가 어떤 대화를 하는지 표시하고 싶어서 닉네임을 back-end단에 저장해주어야하는데
 // 같은 text 타입이라 닉네임과 메시지가 구별이 안된다.
