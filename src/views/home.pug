@@ -10,12 +10,17 @@ html(lang="en")
             h1 Noom
         main
             div#welcome
-                form
+                h3
+                form#name
+                    input(placeholder="nickname", required, type="text")
+                    button Save
+                form#enter
                     input(placeholder="room name", required, type="text")
                     button Enter Room
             div#room
                 h3
-                form
+                ul
+                form#msg
                     input(placeholder="message", required, type="text")
                     button Send 
         script(src="/socket.io/socket.io.js") <!--브라우저에 socket IO 설치-->

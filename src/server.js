@@ -28,7 +28,7 @@ app.use("/public", express.static(__dirname + "/public"));
 app.get("/", (req, res) => res.render("home"));
 app.get("/*", (_, res) => res.render("/"));
 
-const handleListen = () => console.log(`Listening on http://localhost:3000`);
+const handleListen = () => console.log(`Listening on http://localhost:3001`);
 
 const httpServer = http.createServer(app);
 // socket.io 설치
@@ -39,16 +39,26 @@ const wsServer = new Server(httpServer);
 wsServer.on("connection", socket => {
     // socket.on안에 이벤트를 넣어주면 된다.
     // 두번 째 arg는 emit된 콜백함수를 불러온다. 서버는 백엔드에서 함수를 호출하지만, 함수는 프론트에서 실행된다.
+    socket["nickname"] = "Unknown";
     socket.onAny((event) => {
         console.log(`Socket Event:${event}`);
-    })
+    });
     socket.on("enterRoom", (roomName, done) => {
         socket.join(roomName);
         done();
-    })
-})
+        socket.to(roomName).emit("welcome", socket.nickname);
+    });
+    socket.on("disconnecting", () => {
+        socket.rooms.forEach(room => socket.to(room).emit("bye", socket.nickname));
+    });
+    socket.on("new_message", (msg, roomName, done) => {
+        socket.to(roomName).emit("new_message", `${realTime} ${socket.nickname}: ${msg}`);
+        done();
+    });
+    socket.on("nickname", (nickname) => socket["nickname"] = nickname);
+});
 
-httpServer.listen(3000, handleListen);
+httpServer.listen(3001, handleListen);
 
 
 // text에 서로의 닉네임을 붙혀서 누가 어떤 대화를 하는지 표시하고 싶어서 닉네임을 back-end단에 저장해주어야하는데
