@@ -1,71 +1,73 @@
 // front-end단에서 Io 설치
 const socket = io();
 
+// pug 단
 const welcome = document.querySelector("#welcome");
 const room = document.querySelector("#room");
-const welcomeForm = welcome.querySelector("#enter");
+const nameForm = welcome.querySelector("#name");
+const enterForm = welcome.querySelector("#enter");
+const msgForm = room.querySelector("form");
 
+// 변수 단
 room.hidden = true;
 
-let roomName;
+let roomValue = "";
 
-function handleMessageSubmit(event) {
+// func 단
+function handelMsgSubmit(event) {
+    // 메시지 전송 fn
     event.preventDefault();
-    const input = room.querySelector("#msg input");
-    const value = input.value;
-    socket.emit("new_message", input.value, roomName, () => {
-        addMessage(`You: ${value}`);
+    const msgInput = msgForm.querySelector("input");
+    socket.emit("sendMessage", msgInput.value, roomValue, () => {
+        addMessage(`You: ${msgInput.value}`);
     });
-    input.value = "";
-}
-
-function handleNickSubmit(event) {
-    event.preventDefault();
-    const h3 = welcome.querySelector("h3");
-    const nameInput = welcome.querySelector("#name input");
-    socket.emit("nickname", nameInput.value);
-    h3.innerText = `Welcome ${nameInput.value}`;
-    nameInput.value = "";
 }
 
 function addMessage(msg) {
+    // 채팅창에 메시지를 보여주는 fn
     const ul = room.querySelector("ul");
     const li = document.createElement("li");
     li.innerText = msg;
     ul.appendChild(li);
 }
 
-function showRoom() {
-    // 채팅방에 입장
+function enterRoom() {
+    // room에 입장 후 fn
     welcome.hidden = true;
     room.hidden = false;
-    const h3 = room.querySelector("h3");
-    h3.innerText = `Room ${roomName}`;
-    const msgFormInRoom = room.querySelector("#msg form");
-    msgFormInRoom.addEventListener("submit", handleMessageSubmit);
+    const h1Room = room.querySelector("h1");
+    h1Room.innerText = `Room Name: ${roomValue}`;
+    msgForm.addEventListener("submit", handelMsgSubmit);
 }
 
-function handleRoomEnter(event) {
+function handleEnterSubmit(event) {
+    // room에 입장을 submit 했을 때 fn
     event.preventDefault();
-    const nameForm = welcome.querySelector("#name form");
-    const enterInput = welcome.querySelector("#enter input");
-    // send대신 emit을 쓴다. 1.emit은 특정 이벤트를 emit 해준다.
-    // 2.emit을 하면 argument를 줄 수 있는데 이것은 object가 될 수 있다. 전 처럼 string만 전송할 필요가 없다.
-    // 3.emit의 마지막 argument에는 콜백함수가 들어갈 수 있다.
-    roomName = enterInput.value;
-    nameForm.addEventListener("submit", handleNickSubmit);
-    socket.emit("enterRoom", enterInput.value, showRoom);
+    const enterInput = enterForm.querySelector("input");
+    roomValue = enterInput.value;
+    socket.emit("enterRoom", roomValue, enterRoom);
     enterInput.value = "";
 }
 
-welcomeForm.addEventListener("submit", handleRoomEnter);
+function handleNameSubmit(event) {
+    // room에서 사용할 name설정 fn
+    event.preventDefault();
+    const nameInput = nameForm.querySelector("input");
+    const h1Name = welcome.querySelector("h1");
+    h1Name.innerText = `Welcome ${nameInput.value}`;
+    const nameValue = nameInput.value;
+    socket.emit("name", nameValue);
+    nameInput.value = "";
+}
 
-socket.on("welcome", (user) => {
-    addMessage(`${user} joined!`);
+// event생성 단
+enterForm.addEventListener("submit", handleEnterSubmit);
+nameForm.addEventListener("submit", handleNameSubmit);
+
+// socket 통신 단
+socket.on("welcome", socketName => {
+    addMessage(`${socketName} joined!`);
 });
-
-socket.on("bye", (leftUser) => {
-    addMessage(`${leftUser} left 😥`);
+socket.on("sendMessage", msg => {
+    addMessage(msg);
 });
-
-socket.on("new_message", addMessage);

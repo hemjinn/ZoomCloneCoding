@@ -36,40 +36,40 @@ const httpServer = http.createServer(app);
 // 그래서 socket IO를 브라우저에도 설치를 한다. -> home.pug에 script 추가
 const wsServer = new Server(httpServer);
 
+function publicRooms() {
+    const {
+        sockets: {
+            adapter: { sids, rooms },
+        },
+    } = wsServer;
+    const publicRooms = [];
+    rooms.forEach((_, key) => {
+        if (sids.get(key) === undefined) {
+            publicRooms.push(key);
+        }
+    })
+}
+
 wsServer.on("connection", socket => {
     // socket.on안에 이벤트를 넣어주면 된다.
     // 두번 째 arg는 emit된 콜백함수를 불러온다. 서버는 백엔드에서 함수를 호출하지만, 함수는 프론트에서 실행된다.
-    socket["nickname"] = "Unknown";
+    socket["name"] = "Unknown";
     socket.onAny((event) => {
-        console.log(`Socket Event:${event}`);
+        console.log(wsServer.sockets.adapter);
+        console.log(`Socket Event: ${event}`);
+    })
+    socket.on("name", (nameValue) => {
+        socket["name"] = nameValue;
     });
     socket.on("enterRoom", (roomName, done) => {
         socket.join(roomName);
         done();
-        socket.to(roomName).emit("welcome", socket.nickname);
+        socket.to(roomName).emit("welcome", socket.name);
     });
-    socket.on("disconnecting", () => {
-        socket.rooms.forEach(room => socket.to(room).emit("bye", socket.nickname));
-    });
-    socket.on("new_message", (msg, roomName, done) => {
-        socket.to(roomName).emit("new_message", `${realTime} ${socket.nickname}: ${msg}`);
+    socket.on("sendMessage", (msg, roomName, done) => {
+        socket.to(roomName).emit("sendMessage", `${realTime()} ${socket.name}: ${msg}`);
         done();
     });
-    socket.on("nickname", (nickname) => socket["nickname"] = nickname);
 });
 
 httpServer.listen(3001, handleListen);
-
-
-// text에 서로의 닉네임을 붙혀서 누가 어떤 대화를 하는지 표시하고 싶어서 닉네임을 back-end단에 저장해주어야하는데
-// 같은 text 타입이라 닉네임과 메시지가 구별이 안된다.
-// 사용하는 text의 타입을 '메시지'용도와 '닉네임'용도로 나눈다.
-{
-    type: "message";
-    payload: "hello everyone!";
-}
-
-{
-    type:"nickname";
-    payload:"hemjin";
-}
