@@ -21,6 +21,7 @@ function handelMsgSubmit(event) {
     socket.emit("sendMessage", msgInput.value, roomValue, () => {
         addMessage(`You: ${msgInput.value}`);
     });
+    msgInput,value = "";
 }
 
 function addMessage(msg) {
@@ -65,9 +66,28 @@ enterForm.addEventListener("submit", handleEnterSubmit);
 nameForm.addEventListener("submit", handleNameSubmit);
 
 // socket 통신 단
-socket.on("welcome", socketName => {
+socket.on("welcome", (socketName, newCount) => {
+    const h1Room = room.querySelector("h1");
+    h1Room.innerText = `Room Name: ${roomValue} (${newCount})`;
     addMessage(`${socketName} joined!`);
 });
 socket.on("sendMessage", msg => {
     addMessage(msg);
+});
+socket.on("bye", (socketName, newCount) => {
+    const h1Room = room.querySelector("h1");
+    h1Room.innerText = `Room Name: ${roomValue} (${newCount})`;
+    addMessage(`${socketName} left 😥`);
+});
+socket.on("roomChange", (rooms) => {
+    const roomList = welcome.querySelector("ul");
+    roomList.innerHTML = "";
+    if(rooms.length === 0) {
+        return;
+    }  
+    rooms.forEach((room) => {
+        const li = document.createElement("li");
+        li.innerText = `${room}`;
+        roomList.append(li);
+    })
 });

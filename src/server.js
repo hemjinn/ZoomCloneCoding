@@ -37,17 +37,18 @@ const httpServer = http.createServer(app);
 const wsServer = new Server(httpServer);
 
 function publicRooms() {
-    const {
-        sockets: {
-            adapter: { sids, rooms },
-        },
-    } = wsServer;
+    const { sockets: { adapter: { sids, rooms } } } = wsServer;
     const publicRooms = [];
     rooms.forEach((_, key) => {
         if (sids.get(key) === undefined) {
             publicRooms.push(key);
         }
-    })
+    });
+    return publicRooms;
+}
+
+function countRoom(roomName) {
+    return wsServer.sockets.adapter.rooms.get(roomName)?.size;
 }
 
 wsServer.on("connection", socket => {
@@ -55,7 +56,6 @@ wsServer.on("connection", socket => {
     // 두번 째 arg는 emit된 콜백함수를 불러온다. 서버는 백엔드에서 함수를 호출하지만, 함수는 프론트에서 실행된다.
     socket["name"] = "Unknown";
     socket.onAny((event) => {
-        console.log(wsServer.sockets.adapter);
         console.log(`Socket Event: ${event}`);
     })
     socket.on("name", (nameValue) => {
@@ -64,11 +64,18 @@ wsServer.on("connection", socket => {
     socket.on("enterRoom", (roomName, done) => {
         socket.join(roomName);
         done();
-        socket.to(roomName).emit("welcome", socket.name);
+        socket.to(roomName).emit("welcome", socket.name, countRoom(roomName));
+        wsServer.sockets.emit("roomChange", publicRooms());
     });
     socket.on("sendMessage", (msg, roomName, done) => {
         socket.to(roomName).emit("sendMessage", `${realTime()} ${socket.name}: ${msg}`);
         done();
+    });
+    socket.on("disconnecting", () => {
+        socket.rooms.forEach((room) => socket.to(room).emit("bye", socket.name, countRoom(room)-1));
+    });
+    socket.on("disconnect", () => {
+        wsServer.sockets.emit("roomChange", publicRooms());
     });
 });
 
