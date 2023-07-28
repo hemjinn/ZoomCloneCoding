@@ -1,5 +1,6 @@
 import http from "http";
 import { Server } from 'socket.io';
+import { instrument } from "@socket.io/admin-ui";
 import express from "express";
 
 // 채팅로그에 타임스태프 구현
@@ -34,7 +35,15 @@ const httpServer = http.createServer(app);
 // socket.io 설치
 // 브라우저가 주는 websocket은 socket IO와 호환이 안된다. 왜? socket IO의 기능이 훨씬 많기때문.
 // 그래서 socket IO를 브라우저에도 설치를 한다. -> home.pug에 script 추가
-const wsServer = new Server(httpServer);
+const wsServer = new Server(httpServer, {
+    cors: {
+        origin: ["https://admin.socket.io"],
+        credentials: true
+      },
+});
+instrument(wsServer, {
+    auth: false
+  });
 
 function publicRooms() {
     const { sockets: { adapter: { sids, rooms } } } = wsServer;

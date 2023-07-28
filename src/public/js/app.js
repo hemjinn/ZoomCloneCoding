@@ -18,10 +18,12 @@ function handelMsgSubmit(event) {
     // 메시지 전송 fn
     event.preventDefault();
     const msgInput = msgForm.querySelector("input");
+    const value = msgInput.value
     socket.emit("sendMessage", msgInput.value, roomValue, () => {
-        addMessage(`You: ${msgInput.value}`);
+        addMessage(`You: ${value}`);
     });
-    msgInput,value = "";
+    msgInput.value = "";
+    
 }
 
 function addMessage(msg) {
